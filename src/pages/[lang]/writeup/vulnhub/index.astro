@@ -1,0 +1,377 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../../../layouts/Layout.astro';
+import { useTranslations } from '../../../../utils/i18n';
+import { sortByDate, filterByLang } from '../../../../utils/helpers';
+
+export async function getStaticPaths() {
+  return [
+    { params: { lang: 'es' } },
+    { params: { lang: 'en' } }
+  ];
+}
+
+const { lang } = Astro.params;
+const t = useTranslations(lang as 'es' | 'en');
+
+// Obtener todos los writeups de VulnHub
+const allWriteups = await getCollection('writeups');
+const vulnhubWriteups = sortByDate(
+  filterByLang(allWriteups, lang as string).filter(w => w.data.platform === 'vulnhub')
+);
+
+const difficultyColors = {
+  easy: '#10b981',
+  medium: '#f59e0b',
+  hard: '#ef4444',
+  insane: '#8b5cf6'
+};
+---
+
+<Layout
+  title={`VulnHub - ${t('writeups.title')}`}
+  description={lang === 'es' ? 'Writeups de VulnHub' : 'VulnHub Writeups'}
+  lang={lang}
+>
+  <main class="vulnhub-writeups">
+    <div class="container">
+      <!-- Header -->
+      <header class="platform-header">
+        <a href={`/${lang}/writeup`} class="back-link">
+          ← {lang === 'es' ? 'Volver a Writeups' : 'Back to Writeups'}
+        </a>
+        <div class="platform-info">
+          <div class="platform-logo">
+            <img 
+              src="/images/platforms/vulnhub.png" 
+              alt="VulnHub"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+            />
+            <span class="platform-fallback">📦</span>
+          </div>
+          <div>
+            <h1 class="platform-title">VulnHub</h1>
+            <p class="platform-subtitle">
+              {vulnhubWriteups.length} {lang === 'es' ? 'writeups disponibles' : 'available writeups'}
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <!-- Writeups Grid -->
+      {vulnhubWriteups.length > 0 ? (
+        <div class="writeups-grid">
+          {vulnhubWriteups.map((writeup) => {
+            const difficultyColor = difficultyColors[writeup.data.difficulty];
+            return (
+              <a 
+                href={`/${lang}/blog/${writeup.slug}`}
+                class="writeup-card"
+              >
+                <div class="writeup-header">
+                  <h3 class="writeup-title">{writeup.data.title}</h3>
+                  <div class="writeup-badges">
+                    <span 
+                      class="badge badge-difficulty" 
+                      style={`background: ${difficultyColor}20; color: ${difficultyColor}; border: 1px solid ${difficultyColor}40;`}
+                    >
+                      {t(`difficulty.${writeup.data.difficulty}`)}
+                    </span>
+                    <span class="badge badge-os">
+                      {writeup.data.os === 'linux' ? '🐧' : writeup.data.os === 'windows' ? '🪟' : '💻'} 
+                      {t(`os.${writeup.data.os}`)}
+                    </span>
+                  </div>
+                </div>
+                
+                {writeup.data.description && (
+                  <p class="writeup-description">{writeup.data.description}</p>
+                )}
+
+                <div class="writeup-footer">
+                  {writeup.data.tags && writeup.data.tags.length > 0 && (
+                    <div class="writeup-tags">
+                      {writeup.data.tags.slice(0, 3).map((tag: string) => (
+                        <span class="tag">#{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                  <span class="read-more">
+                    {lang === 'es' ? 'Leer más' : 'Read more'} →
+                  </span>
+                </div>
+              </a>
+            );
+          })}
+        </div>
+      ) : (
+        <div class="empty-state">
+          <p>{lang === 'es' ? 'No hay writeups disponibles aún' : 'No writeups available yet'}</p>
+        </div>
+      )}
+    </div>
+  </main>
+</Layout>
+
+<style>
+  .vulnhub-writeups {
+    min-height: 100vh;
+    padding: 2rem 0 4rem;
+    background: var(--bg-color);
+  }
+
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  .platform-header {
+    margin-bottom: 3.5rem;
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    color: var(--accent-color);
+    text-decoration: none;
+    font-size: 0.95rem;
+    margin-bottom: 2rem;
+    transition: all 0.2s ease;
+    font-weight: 500;
+  }
+
+  .back-link:hover {
+    color: var(--accent-hover);
+    transform: translateX(-4px);
+  }
+
+  .platform-info {
+    display: flex;
+    align-items: center;
+    gap: 1.75rem;
+  }
+
+  .platform-logo {
+    width: 90px;
+    height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 0.75rem;
+    padding: 0.875rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+
+  .platform-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .platform-fallback {
+    display: none;
+    font-size: 2.75rem;
+  }
+
+  .platform-title {
+    font-size: 2.75rem;
+    font-weight: 800;
+    color: var(--text-color);
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.02em;
+  }
+
+  .platform-subtitle {
+    color: var(--text-muted);
+    font-size: 1.05rem;
+    font-weight: 500;
+  }
+
+  .writeups-grid {
+    display: grid;
+    gap: 1.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  }
+
+  .writeup-card {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 0.875rem;
+    padding: 1.75rem;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    gap: 1.125rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .writeup-card:hover {
+    transform: translateY(-6px);
+    border-color: var(--accent-color);
+    box-shadow: 0 12px 32px -8px rgba(59, 130, 246, 0.25);
+  }
+
+  .writeup-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+  }
+
+  .writeup-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-color);
+    line-height: 1.4;
+    transition: color 0.2s ease;
+  }
+
+  .writeup-card:hover .writeup-title {
+    color: var(--accent-color);
+  }
+
+  .writeup-badges {
+    display: flex;
+    gap: 0.625rem;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    padding: 0.375rem 0.875rem;
+    border-radius: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  .badge-os {
+    background: var(--badge-bg);
+    color: var(--badge-text);
+    border: 1px solid var(--border-color);
+  }
+
+  .writeup-description {
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+    line-height: 1.7;
+    flex: 1;
+  }
+
+  .writeup-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 1.125rem;
+    border-top: 1px solid var(--border-color);
+    margin-top: auto;
+  }
+
+  .writeup-tags {
+    display: flex;
+    gap: 0.625rem;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+
+  .tag {
+    color: var(--accent-color);
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: color 0.2s ease;
+  }
+
+  .writeup-card:hover .tag {
+    color: var(--accent-hover);
+  }
+
+  .read-more {
+    color: var(--accent-color);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+  }
+
+  .writeup-card:hover .read-more {
+    color: var(--accent-hover);
+    transform: translateX(4px);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 5rem 2rem;
+    color: var(--text-muted);
+    font-size: 1.125rem;
+  }
+
+  @media (max-width: 1024px) {
+    .writeups-grid {
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .container {
+      padding: 0 1rem;
+    }
+
+    .platform-header {
+      margin-bottom: 2.5rem;
+    }
+
+    .platform-title {
+      font-size: 2.25rem;
+    }
+
+    .platform-subtitle {
+      font-size: 0.95rem;
+    }
+
+    .writeups-grid {
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+    }
+
+    .writeup-card {
+      padding: 1.5rem;
+    }
+
+    .platform-info {
+      gap: 1.25rem;
+    }
+
+    .platform-logo {
+      width: 70px;
+      height: 70px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .platform-title {
+      font-size: 1.875rem;
+    }
+
+    .writeup-card {
+      padding: 1.25rem;
+    }
+
+    .writeup-title {
+      font-size: 1.125rem;
+    }
+
+    .writeup-footer {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .read-more {
+      align-self: flex-end;
+    }
+  }
+</style>

@@ -1,0 +1,31 @@
+---
+import Layout from './Layout.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+  lang?: string;
+  image?: string;
+}
+
+const { title, description, lang = 'es', image } = Astro.props;
+---
+
+<Layout
+  title={title}
+  description={description}
+  lang={lang}
+  image={image}
+  canonical={Astro.url.href}
+>
+  <main class="page-layout">
+    <slot />
+  </main>
+</Layout>
+
+<style>
+  .page-layout {
+    min-height: calc(100vh - 16rem);
+    padding: 2rem 0;
+  }
+</style>

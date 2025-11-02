@@ -1,0 +1,84 @@
+---
+// ThemeToggle.astro - Componente para cambiar entre modo claro y oscuro
+---
+
+<button
+  id="theme-toggle"
+  type="button"
+  aria-label="Toggle theme"
+  class="theme-toggle"
+>
+  <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="5"></circle>
+    <line x1="12" y1="1" x2="12" y2="3"></line>
+    <line x1="12" y1="21" x2="12" y2="23"></line>
+    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+    <line x1="1" y1="12" x2="3" y2="12"></line>
+    <line x1="21" y1="12" x2="23" y2="12"></line>
+    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+  </svg>
+  <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+  </svg>
+</button>
+
+<script>
+  function toggleTheme() {
+    const isDark = document.documentElement.classList.toggle('dark');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  }
+
+  document.getElementById('theme-toggle')?.addEventListener('click', toggleTheme);
+</script>
+
+<style>
+  .theme-toggle {
+    padding: 0.5rem;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 0.375rem;
+    background-color: var(--bg-color, white);
+    color: var(--text-color, #1f2937);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+  }
+
+  .theme-toggle:hover {
+    background-color: var(--bg-hover-color, #f3f4f6);
+    border-color: var(--border-hover-color, #9ca3af);
+  }
+
+  .sun-icon,
+  .moon-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .sun-icon {
+    display: none;
+  }
+
+  .moon-icon {
+    display: block;
+  }
+
+  :global(.dark) .sun-icon {
+    display: block;
+  }
+
+  :global(.dark) .moon-icon {
+    display: none;
+  }
+
+  :global(.dark) .theme-toggle {
+    --bg-color: #1f2937;
+    --text-color: #f9fafb;
+    --border-color: #374151;
+    --bg-hover-color: #374151;
+    --border-hover-color: #4b5563;
+  }
+</style>

@@ -1,0 +1,82 @@
+---
+import Header from "../components/ui/Header.astro";
+import Footer from "../components/ui/Footer.astro";
+import site from "../content/site";
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+  description?: string;
+  icon?: string;
+  image?: string;
+  canonical?: string;
+  lang?: string;
+  robots?: string;
+}
+
+const {
+  title,
+  description,
+  icon,
+  image,
+  canonical,
+  lang = "es",
+  robots = "index, follow",
+} = Astro.props as Props;
+
+const metaTitle = title ? `${site.siteTitle} - ${title}` : site.siteTitle;
+const metaDescription = description || site.description;
+const metaImage = image || site.defaultImage;
+const metaCanonical = canonical || site.siteUrl;
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href={icon ?? "/favicon.svg"} />
+    <meta name="generator" content={Astro.generator} />
+
+    <!-- Primary Meta Tags -->
+    <title>{metaTitle}</title>
+    <meta name="description" content={metaDescription} />
+    <meta name="robots" content={robots} />
+    <link rel="canonical" href={metaCanonical} />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={metaTitle} />
+    <meta property="og:description" content={metaDescription} />
+    <meta property="og:url" content={metaCanonical} />
+    <meta property="og:image" content={metaImage} />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content={site.twitter} />
+    <meta name="twitter:creator" content={site.twitter} />
+    <meta name="twitter:title" content={metaTitle} />
+    <meta name="twitter:description" content={metaDescription} />
+    <meta name="twitter:image" content={metaImage} />
+
+    <!-- Theme script (must be in head to prevent flash) -->
+    <script is:inline src="/theme.js"></script>
+
+    <!-- Optional: structured data -->
+    <script
+      type="application/ld+json"
+      set:html={JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        url: site.siteUrl,
+        name: site.siteTitle,
+        description: site.description,
+      })}
+    />
+  </head>
+  <body>
+    <Header />
+    <slot />
+    <Footer />
+  </body>
+</html>

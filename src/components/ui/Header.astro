@@ -1,0 +1,166 @@
+---
+import { getLangFromUrl, useTranslations } from '../../utils/i18n';
+import LanguageSwitcher from './LanguageSwitcher.astro';
+import ThemeToggle from './ThemeToggle.astro';
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+
+const currentPath = Astro.url.pathname;
+
+// Helper function to check if a nav item is active
+const isActive = (href: string, path: string) => {
+  // Exact match for home
+  if (href === `/${lang}` || href === `/${lang}/`) {
+    return path === `/${lang}` || path === `/${lang}/`;
+  }
+  // For other pages, check if path starts with href
+  return path.startsWith(href);
+};
+
+const navItems = [
+  { label: t('nav.ctf'), href: `/${lang}/ctf` },
+  { label: t('nav.writeups'), href: `/${lang}/writeup` },
+  { label: t('nav.blog'), href: `/${lang}/blog` },
+  { label: t('nav.archive'), href: `/${lang}/archive` },
+  { label: t('nav.about'), href: `/${lang}/about` },
+];
+---
+
+<header class="header">
+  <div class="container">
+    <nav class="nav">
+      <div class="nav-left">
+        <a href={`/${lang}`} class="logo">
+          <span class="logo-text">Crypt0xDev</span>
+        </a>
+        
+        <ul class="nav-links">
+          {navItems.map(item => (
+            <li>
+              <a 
+                href={item.href}
+                class:list={['nav-link', { active: isActive(item.href, currentPath) }]}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div class="nav-actions">
+        <ThemeToggle />
+        <LanguageSwitcher currentLang={lang} />
+      </div>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background-color: var(--bg-color, white);
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    backdrop-filter: blur(8px);
+  }
+
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 4rem;
+    gap: 2rem;
+  }
+
+  .nav-left {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex: 1;
+  }
+
+  .logo {
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .logo-text {
+    font-size: 1.5rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #4f46e5 0%, #818cf8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .nav-links {
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    gap: 2rem;
+  }
+
+  .nav-link {
+    text-decoration: none;
+    color: var(--text-color, #4b5563);
+    font-weight: 500;
+    transition: color 0.2s ease;
+    position: relative;
+  }
+
+  .nav-link:hover {
+    color: var(--accent-color);
+  }
+
+  .nav-link.active {
+    color: var(--accent-color);
+  }
+
+  .nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: -0.5rem;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: var(--accent-color);
+  }
+
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  :global(.dark) .header {
+    --bg-color: rgba(15, 20, 25, 0.8);
+    --border-color: #1e293b;
+    --text-color: #cbd5e1;
+  }
+
+  @media (max-width: 768px) {
+    .nav-links {
+      display: none;
+    }
+
+    .nav-left {
+      gap: 1rem;
+    }
+
+    .nav {
+      gap: 1rem;
+    }
+  }
+</style>

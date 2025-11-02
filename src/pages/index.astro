@@ -1,0 +1,31 @@
+---
+// Redirección al idioma por defecto
+export const prerender = true;
+
+const defaultLang = 'es';
+const supportedLanguages = ['es', 'en'];
+
+// Obtener idioma preferido del navegador
+function getPreferredLanguage(accept: string | null): string {
+  if (!accept) return defaultLang;
+  
+  const languages = accept.split(',')
+    .map(lang => {
+      const [code, q = '1'] = lang.split(';q=');
+      return {
+        code: code.split('-')[0],
+        q: parseFloat(q)
+      };
+    })
+    .sort((a, b) => b.q - a.q);
+  
+  const preferred = languages.find(lang => 
+    supportedLanguages.includes(lang.code)
+  );
+  
+  return preferred ? preferred.code : defaultLang;
+}
+
+// Redirigir al idioma por defecto
+return Astro.redirect(`/${defaultLang}`);
+---

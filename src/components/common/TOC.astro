@@ -1,0 +1,459 @@
+---
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+interface Props {
+  headings: Heading[];
+  title?: string;
+  inline?: boolean; // Para usar en sidebar de writeup
+}
+
+const { headings, title = "Table of Contents", inline = false } = Astro.props;
+
+// Filtrar solo h2 y h3 para no saturar el TOC
+const filteredHeadings = headings.filter(h => h.depth >= 2 && h.depth <= 3);
+---
+
+{filteredHeadings.length > 0 && (
+  <aside class={inline ? "toc-inline" : "toc-sidebar"} aria-labelledby="toc-heading">
+    <nav class="toc">
+      <div class="toc-header">
+        <h2 id="toc-heading" class="toc-title">{title}</h2>
+      </div>
+      <ul class="toc-list">
+        {filteredHeadings.map((heading) => (
+          <li class={`toc-item toc-level-${heading.depth}`}>
+            <a href={`#${heading.slug}`} class="toc-link" data-heading-id={heading.slug}>
+              {heading.text}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  </aside>
+)}
+
+<style>
+  /* Versión inline para sidebar de writeup */
+  .toc-inline {
+    width: 100%;
+    display: block;
+  }
+
+  .toc-inline .toc {
+    background: transparent;
+    border: none;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .toc-inline .toc-header {
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.75rem;
+    border-bottom: 2px solid var(--accent-color);
+  }
+
+  .toc-inline .toc-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--accent-color);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0;
+  }
+
+  /* Sidebar contenedor (para blog posts) */
+  .toc-sidebar {
+    position: fixed;
+    right: 2rem;
+    top: 100px;
+    width: 300px;
+    max-height: calc(100vh - 120px);
+    padding: 0;
+    overflow-y: auto;
+    z-index: 10;
+    display: none;
+    transition: opacity 0.3s ease, transform 0.3s ease, top 0.2s ease;
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .toc-sidebar.hidden {
+    opacity: 0;
+    transform: translateX(20px);
+    pointer-events: none;
+  }
+
+  /* Mostrar solo en pantallas grandes */
+  @media (min-width: 1400px) {
+    .toc-sidebar {
+      display: block;
+      right: calc((100vw - 1000px) / 2 - 350px);
+    }
+  }
+
+  @media (min-width: 1600px) {
+    .toc-sidebar {
+      right: calc((100vw - 1000px) / 2 - 380px);
+    }
+  }
+
+  @media (min-width: 1800px) {
+    .toc-sidebar {
+      right: calc((100vw - 1000px) / 2 - 420px);
+    }
+  }
+
+  @media (min-width: 2000px) {
+    .toc-sidebar {
+      right: calc((100vw - 1000px) / 2 - 480px);
+    }
+  }
+
+  .toc {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 1rem;
+    padding: 1.75rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    backdrop-filter: blur(10px);
+  }
+
+  .toc-header {
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid var(--accent-color);
+  }
+
+  .toc-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .toc-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .toc-item {
+    margin: 0;
+    padding: 0;
+  }
+
+  .toc-link {
+    display: block;
+    padding: 0.625rem 0.875rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border-left: 3px solid transparent;
+    border-radius: 0.375rem;
+    margin: 0.25rem 0;
+    position: relative;
+  }
+
+  .toc-link::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    background: var(--accent-color);
+    transition: all 0.3s ease;
+    opacity: 0;
+  }
+
+  .toc-link:hover {
+    color: var(--accent-color);
+    background: rgba(59, 130, 246, 0.08);
+    border-left-color: var(--accent-color);
+    transform: translateX(6px);
+  }
+
+  .toc-link:hover::before {
+    width: 4px;
+    height: 100%;
+    opacity: 1;
+  }
+
+  /* Indentación para h3 */
+  .toc-level-3 .toc-link {
+    padding-left: 1.75rem;
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+  }
+
+  /* Estado activo */
+  .toc-link.active {
+    color: var(--accent-color) !important;
+    background: rgba(59, 130, 246, 0.15) !important;
+    border-left-color: var(--accent-color) !important;
+    font-weight: 600;
+    transform: translateX(6px);
+  }
+
+  .toc-link.active::before {
+    width: 4px;
+    height: 100%;
+    opacity: 1;
+  }
+
+  /* Scrollbar personalizado */
+  .toc-sidebar::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .toc-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .toc-sidebar::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 10px;
+    transition: background 0.3s ease;
+  }
+
+  .toc-sidebar::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-color);
+  }
+
+  /* Scroll suave y sincronizado */
+  .toc-sidebar {
+    scroll-behavior: auto; /* No usar smooth para que siga el scroll principal */
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* Scroll suave global */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  /* Asegurar que los headings tengan scroll margin */
+  :global(h2[id], h3[id]) {
+    scroll-margin-top: 6rem;
+  }
+
+  /* Animación de entrada */
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .toc-sidebar {
+    animation: slideInRight 0.4s ease-out;
+  }
+
+  /* Efecto de seguimiento suave */
+  .toc-sidebar.following {
+    transition: top 0.15s ease-out;
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const tocSidebar = document.querySelector('.toc-sidebar') as HTMLElement;
+    const tocLinks = document.querySelectorAll('.toc-link');
+    const headings = document.querySelectorAll('h2[id], h3[id]');
+    
+    if (!tocLinks.length || !headings.length || !tocSidebar) return;
+
+    let ticking = false;
+    const header = document.querySelector('header');
+    const headerHeight = header ? header.offsetHeight : 80;
+
+    // Ajustar posición del TOC para que empiece y termine con el contenido del artículo
+    function adjustTocPosition() {
+      if (!tocSidebar) return;
+      
+      const article = document.querySelector('.post-content');
+      const postHeader = document.querySelector('.post-header') as HTMLElement;
+      const relatedWrapper = document.querySelector('.related-wrapper') as HTMLElement;
+      
+      if (!article) return;
+
+      const articleRect = article.getBoundingClientRect();
+      const articleTop = articleRect.top + window.scrollY;
+      const articleBottom = articleTop + articleRect.height;
+      
+      // Calcular el espacio del header
+      const headerBottom = postHeader ? (postHeader.getBoundingClientRect().top + window.scrollY + postHeader.offsetHeight) : 0;
+      
+      // Calcular donde empiezan las recomendaciones
+      const relatedTop = relatedWrapper ? (relatedWrapper.getBoundingClientRect().top + window.scrollY) : articleBottom;
+      
+      const windowTop = window.scrollY;
+      const windowBottom = windowTop + window.innerHeight;
+
+      // El TOC debe empezar después del header
+      const tocStartPosition = Math.max(headerBottom, articleTop);
+
+      // Calcular posición del TOC
+      const headerTopMargin = 100; // Espacio para el header
+      
+      if (windowTop < tocStartPosition) {
+        // Antes del contenido - el TOC espera
+        const offset = Math.max(headerTopMargin, tocStartPosition - windowTop);
+        tocSidebar.style.top = `${offset}px`;
+        tocSidebar.style.maxHeight = `${Math.min(window.innerHeight - offset - 20, relatedTop - tocStartPosition)}px`;
+        tocSidebar.classList.remove('hidden');
+      } else if (windowTop >= relatedTop - window.innerHeight) {
+        // Llegando a las recomendaciones - ocultar TOC
+        const remainingSpace = Math.max(0, relatedTop - windowTop);
+        if (remainingSpace < 200) {
+          tocSidebar.classList.add('hidden');
+        } else {
+          tocSidebar.style.top = `${headerTopMargin}px`;
+          tocSidebar.style.maxHeight = `${Math.min(remainingSpace, window.innerHeight - headerTopMargin - 20)}px`;
+          tocSidebar.classList.remove('hidden');
+        }
+      } else {
+        // En medio del contenido - TOC visible y fijo con margen para el header
+        tocSidebar.style.top = `${headerTopMargin}px`;
+        tocSidebar.style.maxHeight = `calc(100vh - ${headerTopMargin + 20}px)`;
+        tocSidebar.classList.remove('hidden');
+      }
+
+      // Sincronizar scroll del TOC con el artículo (solo en el área del contenido)
+      const contentScrollStart = tocStartPosition;
+      const contentScrollEnd = Math.min(relatedTop, articleBottom) - window.innerHeight;
+      const contentScrollRange = contentScrollEnd - contentScrollStart;
+      
+      if (contentScrollRange > 0 && windowTop >= contentScrollStart && windowTop <= relatedTop - window.innerHeight) {
+        const scrollInContent = Math.max(0, Math.min(windowTop - contentScrollStart, contentScrollRange));
+        const scrollPercentage = scrollInContent / contentScrollRange;
+        const tocScrollableHeight = tocSidebar.scrollHeight - tocSidebar.clientHeight;
+        tocSidebar.scrollTop = scrollPercentage * tocScrollableHeight;
+      } else if (windowTop < contentScrollStart) {
+        tocSidebar.scrollTop = 0;
+      }
+      
+      ticking = false;
+    }
+
+    // Optimizar scroll con requestAnimationFrame
+    function requestTick() {
+      if (!ticking) {
+        requestAnimationFrame(adjustTocPosition);
+        ticking = true;
+      }
+    }
+
+    window.addEventListener('scroll', requestTick, { passive: true });
+    
+    // Ajustar posición inicial y al redimensionar
+    adjustTocPosition();
+    window.addEventListener('resize', () => {
+      requestTick();
+    });
+
+    // Configurar Intersection Observer para detectar headings visibles
+    const observerOptions = {
+      root: null,
+      rootMargin: '-100px 0px -70% 0px',
+      threshold: 0
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        const id = entry.target.getAttribute('id');
+        const tocLink = document.querySelector(`.toc-link[data-heading-id="${id}"]`);
+        
+        if (!tocLink) return;
+
+        if (entry.isIntersecting) {
+          // Remover clase active de todos los links
+          tocLinks.forEach(link => link.classList.remove('active'));
+          
+          // Agregar clase active al link correspondiente
+          tocLink.classList.add('active');
+        }
+      });
+    }, observerOptions);
+
+    // Observar todos los headings
+    headings.forEach((heading) => {
+      observer.observe(heading);
+    });
+
+    // Click en links del TOC con smooth scroll
+    tocLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetId = link.getAttribute('data-heading-id');
+        if (!targetId) return;
+        
+        const targetElement = document.getElementById(targetId);
+        
+        if (targetElement) {
+          const yOffset = -(headerHeight + 20);
+          const y = targetElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
+          
+          window.scrollTo({ top: y, behavior: 'smooth' });
+          
+          // Actualizar URL
+          history.pushState({}, '', `#${targetId}`);
+          
+          // Activar inmediatamente el link clickeado
+          tocLinks.forEach(l => l.classList.remove('active'));
+          link.classList.add('active');
+        }
+      });
+    });
+
+    // Activar el primer heading al cargar la página
+    if (headings.length > 0 && !window.location.hash) {
+      const firstHeadingId = headings[0].getAttribute('id');
+      if (firstHeadingId) {
+        const firstLink = document.querySelector(`.toc-link[data-heading-id="${firstHeadingId}"]`);
+        if (firstLink) {
+          firstLink.classList.add('active');
+        }
+      }
+    }
+
+    // Si hay un hash en la URL al cargar, activar ese link y hacer scroll
+    if (window.location.hash) {
+      const hashId = window.location.hash.substring(1);
+      const hashLink = document.querySelector(`.toc-link[data-heading-id="${hashId}"]`);
+      const hashElement = document.getElementById(hashId);
+      
+      if (hashLink) {
+        tocLinks.forEach(link => link.classList.remove('active'));
+        hashLink.classList.add('active');
+      }
+      
+      // Hacer scroll al elemento después de cargar
+      if (hashElement) {
+        setTimeout(() => {
+          const yOffset = -(headerHeight + 20);
+          const y = hashElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }, 100);
+      }
+    }
+
+    // Sincronizar scroll inicial
+    adjustTocPosition();
+  });
+</script>

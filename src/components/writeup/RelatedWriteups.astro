@@ -1,0 +1,300 @@
+---
+import { formatDate } from '../../utils/helpers';
+
+interface Writeup {
+  slug: string;
+  data: {
+    title: string;
+    description: string;
+    pubDate: Date;
+    platform: string;
+    difficulty: 'easy' | 'medium' | 'hard' | 'insane';
+    os: string;
+    tags?: string[];
+    lang: string;
+    heroImage?: string;
+    logo?: string;
+  };
+}
+
+interface Props {
+  writeups: Writeup[];
+  title: string;
+  lang: string;
+}
+
+const { writeups, title, lang } = Astro.props;
+
+// Limpiar slugs para generar URLs correctas
+const cleanSlug = (slug: string) => {
+  // De "es/htb/lame" a "htb/lame"
+  return slug.replace(/^(es|en)\//, '');
+};
+
+const getWriteupUrl = (writeup: Writeup) => {
+  const cleanedSlug = cleanSlug(writeup.slug);
+  return `/${lang}/writeup/${cleanedSlug}`;
+};
+
+// Mapeo de colores por dificultad
+const difficultyColors: Record<'easy' | 'medium' | 'hard' | 'insane', string> = {
+  easy: '#10b981',
+  medium: '#f59e0b',
+  hard: '#ef4444',
+  insane: '#8b5cf6'
+};
+
+// Mapeo de plataformas
+const platformNames: Record<string, string> = {
+  htb: 'HackTheBox',
+  tryhackme: 'TryHackMe',
+  vulnhub: 'VulnHub',
+  hackmyvm: 'HackMyVM',
+  portswigger: 'PortSwigger'
+};
+---
+
+{writeups.length > 0 && (
+  <section class="related-writeups" aria-labelledby="related-heading">
+    <h2 id="related-heading" class="section-title">{title}</h2>
+    <div class="writeups-grid">
+      {writeups.map((writeup) => (
+        <article class="writeup-card">
+          <a href={getWriteupUrl(writeup)} class="card-link">
+            {writeup.data.heroImage ? (
+              <div class="card-image">
+                <img 
+                  src={writeup.data.heroImage} 
+                  alt={writeup.data.title}
+                  loading="lazy"
+                />
+              </div>
+            ) : writeup.data.logo ? (
+              <div class="card-image">
+                <img 
+                  src={writeup.data.logo} 
+                  alt={writeup.data.title}
+                  loading="lazy"
+                />
+              </div>
+            ) : (
+              <div class="card-image-placeholder">
+                <span class="platform-icon">
+                  {writeup.data.platform === 'htb' ? '🎯' : 
+                   writeup.data.platform === 'tryhackme' ? '🔒' :
+                   writeup.data.platform === 'vulnhub' ? '📦' :
+                   writeup.data.platform === 'hackmyvm' ? '💻' : '🖥️'}
+                </span>
+              </div>
+            )}
+            
+            <div class="card-content">
+              <div class="card-badges">
+                <span class="badge badge-platform" data-platform={writeup.data.platform}>
+                  {platformNames[writeup.data.platform] || writeup.data.platform.toUpperCase()}
+                </span>
+                <span 
+                  class="badge badge-difficulty"
+                  style={`background-color: ${difficultyColors[writeup.data.difficulty]}20; color: ${difficultyColors[writeup.data.difficulty]}; border: 1px solid ${difficultyColors[writeup.data.difficulty]};`}
+                >
+                  {writeup.data.difficulty.charAt(0).toUpperCase() + writeup.data.difficulty.slice(1)}
+                </span>
+              </div>
+              
+              <h3 class="card-title">{writeup.data.title}</h3>
+              
+              <p class="card-description">{writeup.data.description}</p>
+              
+              <div class="card-footer">
+                <time datetime={writeup.data.pubDate.toISOString()} class="card-date">
+                  {formatDate(writeup.data.pubDate, lang)}
+                </time>
+                <span class="card-os">
+                  {writeup.data.os === 'linux' ? '🐧' : writeup.data.os === 'windows' ? '🪟' : '💻'}
+                </span>
+              </div>
+            </div>
+          </a>
+        </article>
+      ))}
+    </div>
+  </section>
+)}
+
+<style>
+  .related-writeups {
+    margin: 3rem 0;
+    padding: 2rem 0;
+    border-top: 2px solid var(--border-color);
+  }
+
+  .section-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    color: var(--text-color);
+  }
+
+  .writeups-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .writeup-card {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    height: 100%;
+  }
+
+  .writeup-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+    border-color: var(--accent-color);
+  }
+
+  .card-link {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .card-image,
+  .card-image-placeholder {
+    width: 100%;
+    height: 180px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  .card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+
+  .writeup-card:hover .card-image img {
+    transform: scale(1.05);
+  }
+
+  .card-image-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .platform-icon {
+    font-size: 3rem;
+    opacity: 0.9;
+  }
+
+  .card-content {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  .card-badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.875rem;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 0.25rem 0.625rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+
+  .badge-platform {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+  }
+
+  .badge-difficulty {
+    font-weight: 700;
+  }
+
+  .card-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 0.625rem;
+    color: var(--text-color);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card-description {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    flex: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 0.875rem;
+    border-top: 1px solid var(--border-color);
+    margin-top: auto;
+  }
+
+  .card-date {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+  }
+
+  .card-os {
+    font-size: 1.25rem;
+  }
+
+  @media (max-width: 768px) {
+    .writeups-grid {
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+    }
+
+    .section-title {
+      font-size: 1.5rem;
+    }
+
+    .card-image,
+    .card-image-placeholder {
+      height: 150px;
+    }
+  }
+
+  :global(.dark) .writeup-card {
+    background: #1f2937;
+    border-color: #374151;
+  }
+
+  :global(.dark) .writeup-card:hover {
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  :global(.dark) .card-footer {
+    border-color: #374151;
+  }
+</style>

@@ -1,0 +1,72 @@
+---
+import Layout from './Layout.astro';
+import { useTranslations } from '../utils/i18n';
+
+interface Props {
+  title: string;
+  description: string;
+  lang: string;
+  image?: string;
+  pubDate: Date;
+  updatedDate?: Date;
+  tags?: string[];
+}
+
+const { title, description, lang, image, pubDate, updatedDate, tags } = Astro.props;
+const t = useTranslations(lang as 'es' | 'en');
+---
+
+<Layout
+  title={title}
+  description={description}
+  lang={lang}
+  image={image}
+  canonical={Astro.url.href}
+>
+  <article class="blog-layout">
+    <slot />
+    
+    <footer class="article-footer">
+      <div class="article-nav">
+        <a href={`/${lang}/blog`} class="back-link">
+          ← {t('blog.back_to_blog')}
+        </a>
+      </div>
+    </footer>
+  </article>
+</Layout>
+
+<style>
+  .blog-layout {
+    min-height: calc(100vh - 16rem);
+  }
+
+  .article-footer {
+    max-width: 1000px;
+    margin: 3rem auto 0;
+    padding: 2rem 1rem;
+    border-top: 1px solid var(--border-color, #e5e7eb);
+  }
+
+  .article-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .back-link {
+    color: var(--accent-color);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s ease;
+  }
+
+  .back-link:hover {
+    color: var(--accent-hover);
+    text-decoration: underline;
+  }
+
+  :global(.dark) .article-footer {
+    border-color: #374151;
+  }
+</style>

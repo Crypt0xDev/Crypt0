@@ -1,0 +1,75 @@
+---
+interface Props {
+  currentLang: string;
+}
+
+const { currentLang } = Astro.props;
+
+const languages = [
+  { code: 'es', name: 'Español' },
+  { code: 'en', name: 'English' }
+];
+
+const currentPath = Astro.url.pathname;
+const pathWithoutLang = currentPath.replace(/^\/(en|es)/, '') || '/';
+---
+
+<div class="language-switcher">
+  <select id="lang-select" class="lang-select" aria-label="Select language">
+    {languages.map(lang => (
+      <option 
+        value={lang.code} 
+        selected={currentLang === lang.code}
+      >
+        {lang.name}
+      </option>
+    ))}
+  </select>
+</div>
+
+<script define:vars={{ pathWithoutLang }}>
+  const langSelect = document.getElementById('lang-select');
+  if (langSelect) {
+    langSelect.addEventListener('change', (e) => {
+      const newLang = e.target.value;
+      window.location.href = `/${newLang}${pathWithoutLang}`;
+    });
+  }
+</script>
+
+<style>
+  .language-switcher {
+    position: relative;
+  }
+
+  .lang-select {
+    padding: 0.5rem 2rem 0.5rem 1rem;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 0.375rem;
+    background-color: var(--bg-color, white);
+    color: var(--text-color, #1f2937);
+    font-size: 0.875rem;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+  }
+
+  .lang-select:hover {
+    border-color: var(--border-hover-color, #9ca3af);
+  }
+
+  .lang-select:focus {
+    outline: 2px solid var(--accent-color, #3b82f6);
+    outline-offset: 2px;
+  }
+
+  :global(.dark) .lang-select {
+    --bg-color: #1f2937;
+    --text-color: #f9fafb;
+    --border-color: #374151;
+    --border-hover-color: #4b5563;
+  }
+</style>

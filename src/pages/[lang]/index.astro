@@ -1,0 +1,976 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import { getLangFromUrl, useTranslations } from '../../utils/i18n';
+import { formatDate, sortByDate, filterByLang } from '../../utils/helpers';
+
+export function getStaticPaths() {
+  return [
+    { params: { lang: 'es' } },
+    { params: { lang: 'en' } }
+  ];
+}
+
+const { lang } = Astro.params;
+const t = useTranslations(lang as 'es' | 'en');
+
+const allPosts = await getCollection('blog');
+const allWriteups = await getCollection('writeups');
+
+const recentPosts = sortByDate(filterByLang(allPosts, lang as string)).slice(0, 3);
+const recentWriteups = sortByDate(filterByLang(allWriteups, lang as string)).slice(0, 3);
+
+// Datos estructurados para SEO (Schema.org)
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "Crypt0xDev",
+  "description": lang === 'es' 
+    ? "Blog y writeups sobre ciberseguridad, pentesting y hacking ético"
+    : "Blog and writeups about cybersecurity, pentesting and ethical hacking",
+  "url": `https://crypt0xdev.com/${lang}`,
+  "inLanguage": lang,
+  "author": {
+    "@type": "Organization",
+    "name": "Crypt0xDev"
+  },
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": `https://crypt0xdev.com/${lang}/search?q={search_term_string}`,
+    "query-input": "required name=search_term_string"
+  }
+};
+
+const blogPostsStructuredData = recentPosts.map(post => ({
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": post.data.title,
+  "description": post.data.description,
+  "image": post.data.heroImage,
+  "datePublished": post.data.pubDate.toISOString(),
+  "author": {
+    "@type": "Organization",
+    "name": "Crypt0xDev"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Crypt0xDev"
+  },
+  "keywords": post.data.tags?.join(', ') || '',
+  "articleSection": "Cybersecurity"
+}));
+---
+
+<Layout title={t('nav.home')} description="Blog y writeups sobre ciberseguridad" lang={lang}>
+  <!-- Datos estructurados para SEO -->
+  <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
+  {blogPostsStructuredData.map(data => (
+    <script type="application/ld+json" set:html={JSON.stringify(data)} />
+  ))}
+
+  <main class="home">
+    <section class="hero">
+      <div class="container">
+        <div class="hero-content">
+          <h1 class="hero-title">
+            {t('common.welcome_to')} <span class="gradient-text">Crypt0xDev</span>
+          </h1>
+          <p class="hero-description">
+            {t('common.hero_description')}
+          </p>
+        </div>
+      </div>
+    </section>
+
+    {recentPosts.length > 0 && (
+      <section class="section" aria-labelledby="recent-posts-title">
+        <div class="container">
+          <h2 id="recent-posts-title" class="section-title">{t('blog.latest_posts')}</h2>
+          <div class="cards-grid" role="list">
+            {recentPosts.map((post) => {
+              // El slug viene como "es/introduccion-pentesting" o "en/introduction-pentesting"
+              // Tomamos solo la última parte (el nombre del archivo)
+              const slugParts = post.slug.split('/');
+              const actualSlug = (slugParts[0] === 'es' || slugParts[0] === 'en')
+                ? slugParts[slugParts.length - 1]
+                : post.slug;
+              return (
+                <article 
+                  class="card" 
+                  role="listitem"
+                  itemscope 
+                  itemtype="https://schema.org/BlogPosting"
+                >
+                  {post.data.heroImage && (
+                    <div class="card-image">
+                      <img 
+                        src={post.data.heroImage} 
+                        alt={post.data.title}
+                        loading="lazy"
+                        itemprop="image"
+                      />
+                    </div>
+                  )}
+                  <div class="card-content">
+                    <div class="card-header-meta">
+                      <time 
+                        class="card-date" 
+                        datetime={post.data.pubDate.toISOString()}
+                        itemprop="datePublished"
+                      >
+                        {formatDate(post.data.pubDate, lang as string)}
+                      </time>
+                    </div>
+                    <h3 class="card-title" itemprop="headline">
+                      <a 
+                        href={`/${lang}/blog/${actualSlug}`}
+                        itemprop="url"
+                      >
+                        {post.data.title}
+                      </a>
+                    </h3>
+                    <p class="card-description" itemprop="description">
+                      {post.data.description}
+                    </p>
+                    {post.data.tags && post.data.tags.length > 0 && (
+                      <div class="card-footer-tags">
+                        {post.data.tags.slice(0, 2).map((tag) => (
+                          <a 
+                            href={`/${lang}/tag/${tag.toLowerCase().replace(/\s+/g, '-')}`}
+                            class="tag-badge"
+                            rel="tag"
+                            itemprop="keywords"
+                          >
+                            {tag}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+    )}
+
+    {recentWriteups.length > 0 && (
+      <section class="section" aria-labelledby="recent-writeups-title">
+        <div class="container">
+          <h2 id="recent-writeups-title" class="section-title">{t('writeups.latest')}</h2>
+          <div class="cards-grid" role="list">
+            {recentWriteups.map((writeup) => {
+              // El slug viene como "es/htb/lame" o "en/htb/sample"
+              // Eliminamos la parte del idioma
+              const slugParts = writeup.slug.split('/');
+              const actualSlug = (slugParts[0] === 'es' || slugParts[0] === 'en')
+                ? slugParts.slice(1).join('/')
+                : writeup.slug;
+              return (
+                <article 
+                  class="card"
+                  role="listitem"
+                  itemscope 
+                  itemtype="https://schema.org/TechArticle"
+                >
+                  {writeup.data.heroImage && (
+                    <div class="card-image">
+                      <img 
+                        src={writeup.data.heroImage} 
+                        alt={writeup.data.title}
+                        loading="lazy"
+                        itemprop="image"
+                      />
+                    </div>
+                  )}
+                  <div class="card-content">
+                    <div class="card-badges-top">
+                      <span 
+                        class="platform-badge" 
+                        data-platform={writeup.data.platform}
+                        itemprop="about"
+                      >
+                        {writeup.data.platform.toUpperCase()}
+                      </span>
+                      <span 
+                        class={`difficulty-badge difficulty-${writeup.data.difficulty}`}
+                        itemprop="proficiencyLevel"
+                      >
+                        {t(`difficulty.${writeup.data.difficulty}`)}
+                      </span>
+                      {writeup.data.os && (
+                        <span class="os-badge" itemprop="operatingSystem">
+                          {writeup.data.os === 'linux' ? '🐧' : writeup.data.os === 'windows' ? '🪟' : '💻'}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <h3 class="card-title" itemprop="headline">
+                      <a 
+                        href={`/${lang}/writeup/${actualSlug}`}
+                        itemprop="url"
+                      >
+                        {writeup.data.title}
+                      </a>
+                    </h3>
+                    
+                    <p class="card-description" itemprop="description">
+                      {writeup.data.description}
+                    </p>
+                    
+                    <div class="card-footer-info">
+                      {writeup.data.tags && writeup.data.tags.length > 0 && (
+                        <div class="card-footer-tags">
+                          {writeup.data.tags.slice(0, 4).map((tag) => (
+                            <a 
+                              href={`/${lang}/tag/${tag.toLowerCase().replace(/\s+/g, '-')}`}
+                              class="tag-badge-small"
+                              rel="tag"
+                              itemprop="keywords"
+                            >
+                              #{tag}
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+    )}
+  </main>
+</Layout>
+
+<style>
+  @keyframes fadeInDown {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes shimmer {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(30px, -30px) scale(1.1); }
+  }
+
+  .home { 
+    min-height: calc(100vh - 16rem);
+    background: linear-gradient(135deg, 
+      var(--bg-color) 0%, 
+      color-mix(in srgb, var(--bg-color) 97%, var(--accent-color) 3%) 100%
+    );
+  }
+  
+  .hero { 
+    padding: 6rem 0; 
+    background-color: transparent;
+    background-image: 
+      radial-gradient(circle, rgba(79, 70, 229, 0.1) 1px, transparent 1px);
+    background-size: 30px 30px;
+    background-position: 0 0, 15px 15px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg, 
+      transparent 0%, 
+      var(--bg-color) 100%
+    );
+    z-index: 0;
+  }
+
+  .hero::after {
+    content: none;
+  }
+
+  .hero-content { 
+    text-align: center; 
+    max-width: 800px; 
+    margin: 0 auto; 
+    position: relative;
+    z-index: 1;
+    animation: fadeInDown 0.8s ease-out;
+  }
+  
+  .hero-title { 
+    font-size: 4rem; 
+    font-weight: 900; 
+    margin: 0 0 1.5rem; 
+    line-height: 1.2;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: -0.02em;
+  }
+  
+  .gradient-text { 
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    position: relative;
+    display: inline-block;
+  }
+
+  .gradient-text::after {
+    content: '';
+    position: absolute;
+    bottom: -0.25rem;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+    border-radius: 2px;
+    box-shadow: 0 2px 12px rgba(139, 92, 246, 0.4);
+  }
+  
+  .hero-description { 
+    font-size: 1.375rem; 
+    color: var(--text-muted); 
+    margin: 0 0 2.5rem; 
+    line-height: 1.7;
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+  }
+  
+  .hero-actions { 
+    display: flex; 
+    gap: 1rem; 
+    justify-content: center; 
+    flex-wrap: wrap;
+  }
+  
+  .btn { 
+    padding: 1rem 2.5rem; 
+    border-radius: 0.75rem; 
+    font-weight: 700; 
+    text-decoration: none; 
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 1.05rem;
+    font-family: 'Inter', sans-serif;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s ease, height 0.6s ease;
+  }
+
+  .btn:hover::before {
+    width: 300px;
+    height: 300px;
+  }
+
+  .btn-primary { 
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: white; 
+    box-shadow: 0 8px 24px rgba(79, 70, 229, 0.25);
+    border: none;
+  }
+  
+  .btn-primary:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(79, 70, 229, 0.4);
+  }
+  
+  .btn-secondary { 
+    background: transparent;
+    color: var(--accent-color); 
+    border: 2px solid var(--accent-color); 
+    backdrop-filter: blur(10px);
+  }
+  
+  .btn-secondary:hover {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: white;
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(79, 70, 229, 0.3);
+    border-color: transparent;
+  }
+
+  .section { 
+    padding: 5rem 0;
+    animation: fadeInUp 0.8s ease-out;
+  }
+
+  .section-title { 
+    font-size: 2.5rem; 
+    font-weight: 900; 
+    margin-bottom: 3rem;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--text-color), var(--accent-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .cards-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+    gap: 2rem;
+  }
+
+  .card { 
+    background: var(--card-bg); 
+    border: 2px solid var(--border-color); 
+    border-radius: 1rem; 
+    overflow: hidden; 
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    position: relative;
+    animation: scaleIn 0.6s ease-out backwards;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .card:nth-child(1) { animation-delay: 0.1s; }
+  .card:nth-child(2) { animation-delay: 0.2s; }
+  .card:nth-child(3) { animation-delay: 0.3s; }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .card:hover::before {
+    opacity: 1;
+  }
+
+  .card:hover { 
+    transform: translateY(-8px);
+    border-color: var(--accent-color);
+    box-shadow: 0 20px 48px rgba(79, 70, 229, 0.25);
+  }
+
+  .card-image {
+    width: 100%;
+    height: 200px;
+    overflow: hidden;
+    background: linear-gradient(135deg, 
+      rgba(59, 130, 246, 0.1) 0%, 
+      rgba(139, 92, 246, 0.1) 100%
+    );
+    position: relative;
+  }
+
+  .card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    display: block;
+  }
+
+  .card:hover .card-image img {
+    transform: scale(1.1);
+  }
+
+  .card-content { 
+    padding: 2rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* Header de la tarjeta - solo para blog posts */
+  .card-header-meta {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .card-date {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+  }
+
+  /* Badges superiores - para writeups */
+  .card-badges-top {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .platform-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.875rem;
+    background: linear-gradient(135deg, 
+      rgba(59, 130, 246, 0.15), 
+      rgba(139, 92, 246, 0.1)
+    );
+    color: var(--accent-color);
+    border: 2px solid rgba(59, 130, 246, 0.3);
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 800;
+    font-family: 'Inter', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    line-height: 1;
+  }
+
+  .platform-badge[data-platform="htb"],
+  .platform-badge[data-platform="hackthebox"] {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.08));
+    color: #10b981;
+    border-color: rgba(16, 185, 129, 0.3);
+  }
+
+  .platform-badge[data-platform="vulnhub"] {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.08));
+    color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.3);
+  }
+
+  .platform-badge[data-platform="tryhackme"] {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.08));
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+
+  .platform-badge[data-platform="hackmyvm"] {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.08));
+    color: #8b5cf6;
+    border-color: rgba(139, 92, 246, 0.3);
+  }
+
+  .difficulty-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.875rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    text-transform: capitalize;
+    border: 2px solid;
+    line-height: 1;
+  }
+
+  .difficulty-easy {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.08));
+    color: #10b981;
+    border-color: rgba(16, 185, 129, 0.3);
+  }
+
+  .difficulty-medium {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.08));
+    color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.3);
+  }
+
+  .difficulty-hard {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.08));
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+
+  .difficulty-insane {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.08));
+    color: #8b5cf6;
+    border-color: rgba(139, 92, 246, 0.3);
+  }
+
+  .os-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.75rem;
+    background: linear-gradient(135deg, 
+      rgba(100, 116, 139, 0.15), 
+      rgba(100, 116, 139, 0.08)
+    );
+    color: #64748b;
+    border: 2px solid rgba(100, 116, 139, 0.3);
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    line-height: 1;
+  }
+
+  .skill-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: 2px solid;
+  }
+
+  .skill-beginner {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.08));
+    color: #22c55e;
+    border-color: rgba(34, 197, 94, 0.3);
+  }
+
+  .skill-intermediate {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.08));
+    color: #3b82f6;
+    border-color: rgba(59, 130, 246, 0.3);
+  }
+
+  .skill-advanced {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(168, 85, 247, 0.08));
+    color: #a855f7;
+    border-color: rgba(168, 85, 247, 0.3);
+  }
+
+  .skill-expert {
+    background: linear-gradient(135deg, rgba(236, 72, 153, 0.15), rgba(236, 72, 153, 0.08));
+    color: #ec4899;
+    border-color: rgba(236, 72, 153, 0.3);
+  }
+
+  .points-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: linear-gradient(135deg, 
+      rgba(234, 179, 8, 0.15), 
+      rgba(234, 179, 8, 0.08)
+    );
+    color: #eab308;
+    border: 2px solid rgba(234, 179, 8, 0.3);
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 800;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .attack-vectors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .vector-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: linear-gradient(135deg, 
+      rgba(239, 68, 68, 0.12), 
+      rgba(239, 68, 68, 0.06)
+    );
+    color: #ef4444;
+    border: 2px solid rgba(239, 68, 68, 0.25);
+    border-radius: 0.375rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    text-transform: capitalize;
+  }
+
+  .vector-badge[data-vector="web"] {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0.06));
+    color: #3b82f6;
+    border-color: rgba(59, 130, 246, 0.25);
+  }
+
+  .vector-badge[data-vector="binary"],
+  .vector-badge[data-vector="pwn"] {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0.06));
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.25);
+  }
+
+  .vector-badge[data-vector="crypto"],
+  .vector-badge[data-vector="forensics"] {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.12), rgba(168, 85, 247, 0.06));
+    color: #a855f7;
+    border-color: rgba(168, 85, 247, 0.25);
+  }
+
+  .vector-badge[data-vector="active-directory"],
+  .vector-badge[data-vector="network"] {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.06));
+    color: #10b981;
+    border-color: rgba(16, 185, 129, 0.25);
+  }
+
+  .certifications {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .cert-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: linear-gradient(135deg, 
+      rgba(245, 158, 11, 0.15), 
+      rgba(245, 158, 11, 0.08)
+    );
+    color: #f59e0b;
+    border: 2px solid rgba(245, 158, 11, 0.3);
+    border-radius: 0.375rem;
+    font-size: 0.7rem;
+    font-weight: 800;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: 0.05em;
+  }
+
+  .tag-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.875rem;
+    background: linear-gradient(135deg, 
+      rgba(79, 70, 229, 0.12), 
+      rgba(139, 92, 246, 0.08)
+    );
+    color: var(--accent-color);
+    border: 2px solid rgba(79, 70, 229, 0.2);
+    border-radius: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .tag-badge:hover {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    border-color: transparent;
+  }
+
+  /* Tags pequeños para writeups */
+  .tag-badge-small {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.625rem;
+    background: rgba(79, 70, 229, 0.08);
+    color: var(--accent-color);
+    border: 1px solid rgba(79, 70, 229, 0.15);
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    font-family: 'Inter', sans-serif;
+    line-height: 1;
+  }
+
+  .tag-badge-small:hover {
+    background: rgba(79, 70, 229, 0.15);
+    color: var(--accent-color);
+    border-color: rgba(79, 70, 229, 0.3);
+    transform: translateY(-1px);
+  }
+
+  /* Footer de tags - para blog posts */
+  .card-footer-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+  }
+
+  /* Footer info - para writeups */
+  .card-footer-info {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .card-footer-info .card-footer-tags {
+    border-top: none;
+    padding-top: 0;
+  }
+
+  .card-title { 
+    font-size: 1.375rem; 
+    font-weight: 800; 
+    margin: 0;
+    line-height: 1.3;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: -0.01em;
+  }
+
+  .card-title a { 
+    color: var(--text-color); 
+    text-decoration: none;
+    transition: color 0.3s ease;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card-title a:hover { 
+    color: var(--accent-color);
+  }
+
+  .card-description { 
+    color: var(--text-muted); 
+    margin: 0;
+    line-height: 1.7;
+    font-size: 0.9375rem;
+    font-family: 'Inter', sans-serif;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    flex: 1;
+  }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .hero-title { 
+      font-size: 3rem; 
+    }
+    
+    .section-title {
+      font-size: 2rem;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .hero-title { 
+      font-size: 2.5rem; 
+    }
+    
+    .hero-description {
+      font-size: 1.125rem;
+    }
+    
+    .section {
+      padding: 3rem 0;
+    }
+    
+    .section-title {
+      font-size: 1.75rem;
+      margin-bottom: 2rem;
+    }
+    
+    .cards-grid { 
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+    
+    .card-content {
+      padding: 1.5rem;
+    }
+    
+    .card-title {
+      font-size: 1.25rem;
+    }
+    
+    .card-badges-top {
+      gap: 0.375rem;
+    }
+    
+    .platform-badge,
+    .difficulty-badge,
+    .os-badge {
+      font-size: 0.6875rem;
+      padding: 0.3125rem 0.625rem;
+    }
+    
+    .tag-badge {
+      font-size: 0.75rem;
+      padding: 0.3125rem 0.75rem;
+    }
+    
+    .tag-badge-small {
+      font-size: 0.6875rem;
+      padding: 0.25rem 0.5rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .hero {
+      padding: 4rem 0;
+    }
+    
+    .hero-title {
+      font-size: 2rem;
+    }
+    
+    .hero-description {
+      font-size: 1rem;
+    }
+    
+    .btn {
+      padding: 0.875rem 1.75rem;
+      font-size: 0.9375rem;
+    }
+    
+    .card-image {
+      height: 160px;
+    }
+  }
+</style>
